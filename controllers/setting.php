@@ -112,7 +112,6 @@ class Setting extends ClearOS_Controller
 
         // Handle form submit
         //-------------------
-
         if (($this->input->post('submit') || $this->input->post('submit_new')) && $form_ok) {
             try {
                 $this->mssql->set_root_password($password,$system_password);
@@ -129,7 +128,6 @@ class Setting extends ClearOS_Controller
 
         try {
             $is_running = $this->mssql->get_running_state();
-            $data['is_password_set'] = $this->mssql->is_root_password_set();
             $data['url_download'] = $this->mssql->get_download_url();
         } catch (Exception $e) {
             $this->page->view_exception($e);

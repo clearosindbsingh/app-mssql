@@ -29,7 +29,6 @@ $app['subcategory'] = lang('base_subcategory_database');
 $app['core_requires'] = array(
     'app-base-core >= 1:1.2.6',
     'app-network-core', 
-    'app-storage-core >= 1:1.4.7',
     'mssql-server >= 11.0',
 );
 
@@ -44,6 +43,6 @@ $app['core_directory_manifest'] = array(
 );
 
 $app['delete_dependency'] = array(
-    //'app-mssql-core',
+    'app-mssql-core',
     'mssql-server',
 );

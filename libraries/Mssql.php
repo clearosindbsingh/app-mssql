@@ -57,10 +57,12 @@ clearos_load_language('mssql');
 
 use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\Shell as Shell;
+use \clearos\apps\base\File as File;
 use \clearos\apps\network\Network_Utils as Network_Utils;
 
 clearos_load_library('base/Daemon');
 clearos_load_library('base/Shell');
+clearos_load_library('base/File');
 clearos_load_library('network/Network_Utils');
 
 // Exceptions
@@ -88,6 +90,7 @@ clearos_load_library('base/Validation_Exception');
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
+const COMMAND_MSSQL_FILE = "/usr/sbin/connect.exp";
 
 class Mssql extends Daemon
 {
@@ -95,10 +98,7 @@ class Mssql extends Daemon
     // V A R I A B L E S
     ///////////////////////////////////////////////////////////////////////////////
 
-    const COMMAND_MSSQLADMIN = '/opt/mssql/bin/mssql-conf';
-    const COMMAND_MYSQLADMIN = '/usr/bin/mysqladmin';
-    const COMMAND_MYSQL = '/usr/bin/mysql';
-    const FILE_PHP_MYADMIN_CONFIGLET = '/etc/httpd/conf.d/phpMyAdmin.conf';
+    
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -114,7 +114,6 @@ class Mssql extends Daemon
 
         parent::__construct('mssql');
         $this->command_filepath = "/usr/sbin/connect.exp";
-        //$this->command_filepath = dirname(__FILE__)."/expect.exp";
     }
     function get_status1()
     {
@@ -131,160 +130,6 @@ class Mssql extends Daemon
         }
         return $running_status;
     }
-    public function is_password_set($username, $hostname)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_username($username));
-        Validation_Exception::is_valid($this->validate_hostname($hostname));
-
-        $options['validate_exit_code'] = FALSE;
-
-        $shell = new Shell();
-        $retval = $shell->execute(
-            self::COMMAND_MYSQLADMIN, "-u'$username' -h'$hostname' --protocol=tcp status", FALSE, $options
-        );
-
-        if ($retval == 0)
-            return FALSE;
-        else
-            return TRUE;
-    }
-    public function set_password_root($password)
-    {
-
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-$this->putPasswordFile(); 
-$command = $this->command_filepath;
-$shell = new Shell();
-$retval = $shell->execute(
-    $command, "set-sa-password", TRUE, $options
-);
-var_dump($shell->get_output());
-var_dump($retval); die('df');
-
-exec($command, $output);
-echo '<pre>'; print_r($output);
-
-
-
-
-
-die('complted');
-
-       // $cmd1 = shell_exec("/opt/mssql/bin/mssql-conf -h");
-       // print_r($cmd1); die('vv');
-
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_password($password));
-
-      
-        
-        
-        $options['validate_exit_code'] = FALSE;
-        $options['stdin'] = "Champ@1234";
-
-        $shell = new Shell();
-        $retval = $shell->execute(
-            self::COMMAND_MSSQLADMIN, "set-sa-password", TRUE, $options
-        );
-        var_dump($shell->get_output());
-        var_dump($retval); die('df');
-        if ($retval == 0)
-            return FALSE;
-        else
-            return TRUE;
-    }
-
-    /**
-     * Checks that the password for localhost.
-     *
-     * @return boolean TRUE if set
-     * @throws Engine_Exception
-     */
-
-    public function is_root_password_set()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        if ($this->is_password_set('root', 'localhost'))
-            return TRUE;
-        else
-            return FALSE;
-    }
-
-    /**
-     * Sets the database password for localhost and hostname.
-     *
-     * @param string $username     username
-     * @param string $old_password old password
-     * @param string $password     password
-     * @param string $hostname     hostname
-     *
-     * @return void
-     * @throws Engine_Exception, Validation_Exception
-     */
-
-    public function set_password($username, $old_password, $password, $hostname)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_username($username));
-        Validation_Exception::is_valid($this->validate_password($old_password));
-        Validation_Exception::is_valid($this->validate_password($password));
-        Validation_Exception::is_valid($this->validate_hostname($hostname));
-
-
-        $this->putPasswordFile(); 
-        $command = $this->command_filepath;
-        $shell = new Shell();
-        $retval = $shell->execute(
-            $command, "set-sa-password", TRUE, $options
-        );
-        var_dump($shell->get_output());
-        var_dump($retval); die('df');
-
-        exec($command, $output);
-        echo '<pre>'; print_r($output);
-
-
-        die('complted');
-
-        if ($old_password)
-            $passwd_param = "-p'$old_password'";
-        else
-            $passwd_param = "";
-
-        try {
-            $options = array();
-            $options['env'] = 'LANG=en_US'; 
-
-            $shell = new Shell();
-            $shell->Execute(
-                self::COMMAND_MYSQLADMIN, 
-                "-u'$username' $passwd_param -h'$hostname' --protocol=tcp password '$password'", FALSE, $options
-            );
-        } catch (Engine_Exception $e) {
-            // KLUDGE: detect access denied so we can return a less cryptic message
-            $output = $shell->get_last_output_line();
-            $error = (preg_match('/Access denied/', $output)) ? lang('mariadb_access_denied') : $output;
-
-            throw new Engine_Exception($error);
-        }
-
-        try {
-            $shell->Execute(
-                self::COMMAND_MYSQLADMIN, "-u$username $passwd_param -h$hostname --protocol=tcp flush-privileges"
-            );
-        } catch (Exception $e) {
-            // Not fatal if it fails
-        }
-    }
-
     public function set_root_password($password,$system_password)
     {
         clearos_profile(__METHOD__, __LINE__);
@@ -295,8 +140,8 @@ die('complted');
         Validation_Exception::is_valid($this->validate_password($system_password));
 
         $this->stop_service();
-        $this->putPasswordFile($password,$system_password); 
-        $command = $this->command_filepath;
+        $this->put_password_file($password,$system_password); 
+        $command = COMMAND_MSSQL_FILE;
 
 
 
@@ -307,6 +152,7 @@ die('complted');
             $command, "set-sa-password", false, $options
         );
         $output = $shell->get_output();
+        //var_dump($output); die;
         $error = (preg_match('/su: Authentication failure/', $output[2])) ? lang('mssql_system_password_wrong') : NULL;
         if($error)
         {
@@ -316,14 +162,11 @@ die('complted');
     function start_service()
     {
         clearos_profile(__METHOD__, __LINE__);
-
-
-        $this->startServiceFile(); 
-        $command = $this->command_filepath;
         $shell = new Shell();
         $options['validate_exit_code'] = FALSE;
         $retval = $shell->execute(
-            $command, "start-service", true, $options
+            //$command, "start-service", true, $options
+            "systemctl start mssql-server", "", true, $options
         );
         //var_dump($shell->get_output());
         //var_dump($retval); die('df');
@@ -331,33 +174,21 @@ die('complted');
     function stop_service()
     {
         clearos_profile(__METHOD__, __LINE__);
-
-        $this->stopServiceFile($system_password); 
-        $command = $this->command_filepath;
         $shell = new Shell();
         $options['validate_exit_code'] = false;
         $retval = $shell->execute(
-            $command, "stop-service", TRUE, $options
+            //$command, "stop-service", TRUE, $options
+            "systemctl stop mssql-server", "", true, $options
         );
         //var_dump($shell->get_output());
         //var_dump($retval); die('df');
     }
 
     /**
-     * Gets the URL for accessing PHP MyADMIN.
+     * Gets the MSSQL Download URLURL.
      *
      * @return string
      */
-
-    public function get_url_php_myadmin()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-        // If a user upgrades to PHP 5.6, they also will have installed separate phpMyAdmin
-        if (file_exists(self::FILE_PHP_MYADMIN_CONFIGLET))
-            return "https://" . $_SERVER['SERVER_ADDR'] . "/phpMyAdmin";
-
-        return "https://" . $_SERVER['SERVER_ADDR'] . ":81/mysql";
-    }
     function get_download_url()
     {
         return "https://www.microsoft.com/en-us/download/details.aspx?id=50402";
@@ -367,21 +198,7 @@ die('complted');
     // V A L I D A T I O N   R O U T I N E S
     ///////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Validates hostname.
-     *
-     * @param string $hostname hostname
-     *
-     * @return string error message if hostname is invalid
-     */
 
-    public function validate_hostname($hostname)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        if (! Network_Utils::is_valid_hostname($hostname))
-            return lang('mariadb_hostname_invalid');
-    }
 
     /**
      * Validates password.
@@ -415,24 +232,10 @@ die('complted');
             return lang('mariadb_password_mismatch');
     }
 
-    /**
-     * Validates username.
-     *
-     * @param string $username username
-     *
-     * @return string error message if username is invalid
-     */
-
-    public function validate_username($username)
+    function put_password_file($password = "Champ@123",$system_password)
     {
-        clearos_profile(__METHOD__, __LINE__);
-
-        if (! preg_match('/^([a-z0-9_\-\.\$]+)$/', $username))
-            return lang('mariadb_username_invalid');
-    }
-    function putPasswordFile($password = "Champ@123",$system_password)
-    {
-        $file = $this->command_filepath;
+        error_reporting(E_ALL); ini_set('display_errors', 1); 
+        $file = COMMAND_MSSQL_FILE;
 
         $commandc_code = '#!/usr/bin/expect -f';
         $commandc_code = $commandc_code.  "\n";
@@ -455,56 +258,28 @@ die('complted');
         $commandc_code = $commandc_code. ' interact';
         $commandc_code = $commandc_code. "\n";
 
-        
-        //echo $file;
-        //echo(file_get_contents($file,1)); die('ss');
-        
-        $f = fopen($file, "w") or die('File not open');
-        fwrite($f, $commandc_code);
-        fclose($f);
-        chmod($file, 0777);
+        $file = new File($file, TRUE);
+        if (!$file->exists())
+            $file->create('root','root','0777');
+        $commandc_codeA[] = $commandc_code;
+        $file->dump_contents_from_array($commandc_codeA);
 
-        // $commandc_code = '#!/usr/bin/expect -f';
-        // $commandc_code = $commandc_code.  "\n";
-        // $commandc_code = $commandc_code. ' set timeout 60';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' spawn /opt/mssql/bin/mssql-conf set-sa-password';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' expect "yes/no" {';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' send "yes\r"';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' expect "*?assword" { send "'.$password.'\r" }';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' } "*?new" { send "'.$password.'\r" }';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' expect "*?Confirm" { send "'.$password.'\r" }';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' expect "*?uccess" { send "/opt/mssql/bin/mssql-conf start-service\r" }';
-        // $commandc_code = $commandc_code. "\n";
-        // $commandc_code = $commandc_code. ' interact';
-        // $commandc_code = $commandc_code. "\n";
-
-        // $file = $this->command_filepath;
-        // //echo $file;
-        // //echo(file_get_contents($file));
-        
         // $f = fopen($file, "w") or die('File not open');
         // fwrite($f, $commandc_code);
         // fclose($f);
         // chmod($file, 0777);
     }
-    function startServiceFile()
+    function start_service_file()
     {
-        $file = $this->command_filepath;
+        $file = COMMAND_MSSQL_FILE;
         $commandc_code = '#!/usr/bin/expect -f';
 
         $commandc_code = $commandc_code.  "\n";
         $commandc_code = $commandc_code. 'set timeout 60';
         $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'spawn /opt/mssql/bin/mssql-conf start-service\n';
+        $commandc_code = $commandc_code. 'spawn systemctl start mssql-server\n';
         $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'expect "*#" { send "/opt/mssql/bin/mssql-conf start-service\n" }';
+        $commandc_code = $commandc_code. 'expect "#" { send "systemctl start mssql-server\n" }';
         $commandc_code = $commandc_code. "\n";
         $commandc_code = $commandc_code. 'interact';
         $commandc_code = $commandc_code. "\n";
@@ -514,17 +289,17 @@ die('complted');
         fclose($f);
         chmod($file, 0777);
     }
-    function stopServiceFile()
+    function stop_service_file()
     {
-        $file = $this->command_filepath;
+        $file = COMMAND_MSSQL_FILE;
         $commandc_code = '#!/usr/bin/expect -f';
 
         $commandc_code = $commandc_code.  "\n";
         $commandc_code = $commandc_code. 'set timeout 60';
         $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'spawn /opt/mssql/bin/mssql-conf stop-service\n';
+        $commandc_code = $commandc_code. 'spawn systemctl stop mssql-server\n';
         $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'expect "*#" { send "/opt/mssql/bin/mssql-conf stop-service\n" }';
+        $commandc_code = $commandc_code. 'expect "*#" { send "systemctl stop mssql-server\n" }';
         $commandc_code = $commandc_code. "\n";
         $commandc_code = $commandc_code. 'interact';
         $commandc_code = $commandc_code. "\n";
