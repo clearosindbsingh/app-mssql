@@ -7,7 +7,7 @@
  * @package    mssql
  * @subpackage controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014 ClearFoundation
+ * @copyright  2017 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
@@ -53,7 +53,7 @@ require clearos_app_base('base') . '/controllers/daemon.php';
  * @package    mssql
  * @subpackage controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014 ClearFoundation
+ * @copyright  2017 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
@@ -66,36 +66,6 @@ class Server extends Daemon
 
     function __construct()
     {
-        parent::__construct('mssql', 'mssql');
-    }
-
-    /**
-     * Full daemon status.
-     *
-     * @return json daemon status encoded in json
-     */
-
-    function full_status()
-    {
-        header('Cache-Control: no-cache, must-revalidate');
-        header('Content-type: application/json');
-
-        $this->load->library('mssql/mssql');
-
-        //$status['status'] = $this->mssql->set_password_root();
-        $status['status'] = $this->mssql->get_status1();
-        //$status['is_password_set'] = $this->mssql->is_root_password_set();
-
-        echo json_encode($status);
-    }
-    function set_status($status)
-    {
-        $this->load->library('mssql/mssql');
-        if($status == 'stop')
-            $this->mssql->stop_service();
-        else
-            $this->mssql->start_service();
-        $response['success'] = true;
-        echo json_encode($response); 
+        parent::__construct('mssql-server', 'mssql');
     }
 }

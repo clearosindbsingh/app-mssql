@@ -33,13 +33,11 @@ $app['core_requires'] = array(
 );
 
 $app['core_file_manifest'] = array( 
-    //'mssql_default.conf' => array ( 'target' => '/etc/clearos/storage.d/mssql_default.conf' ),
-    //'mssql.php'=> array( 'target' => '/var/clearos/base/daemon/mssql.php' ),
+    'mssql-server.php'=> array( 'target' => '/var/clearos/base/daemon/mssql-server.php' ),
 );
 
 $app['core_directory_manifest'] = array(
     '/var/clearos/mssql' => array(),
-    '/var/clearos/mssql/backup' => array(),
 );
 
 $app['delete_dependency'] = array(

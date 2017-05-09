@@ -1,7 +1,7 @@
 <?php
 
 /**
- * mssql settings controller.
+ * MSSQL settings controller.
  *
  * @category   apps
  * @package    mssql
@@ -102,9 +102,19 @@ class Setting extends ClearOS_Controller
             }
             else
             {
+                $running_status = $this->mssql->get_status();
                 if(!preg_match('/^(?=.*[a-z])(?=.*[A-Z]).+$/', $password)) 
                 {
                     $this->form_validation->set_error('password', lang('base_password_lower_and_upper'));
+                    $form_ok = FALSE;
+                }
+                else if($running_status == 'running')
+                {
+                    try {
+                        throw new Exception(lang('mssql_management_tool_not_accessible')); 
+                    } catch (Exception $e) {
+                        $this->page->view_exception($e);
+                    }
                     $form_ok = FALSE;
                 }
             }
@@ -127,7 +137,7 @@ class Setting extends ClearOS_Controller
         //---------------
 
         try {
-            $is_running = $this->mssql->get_running_state();
+            $data['is_running'] = $this->mssql->get_running_state();
             $data['url_download'] = $this->mssql->get_download_url();
         } catch (Exception $e) {
             $this->page->view_exception($e);
@@ -137,6 +147,9 @@ class Setting extends ClearOS_Controller
         // Load views
         //-----------
 
-        $this->page->view_form('mssql/setting', $data, lang('base_settings'));
+        if (TRUE)  # DO CHECK HERE to determine what view to present
+		$this->page->view_form('mssql/setting', $data, lang('base_settings'));
+	else
+		$this->page->view_form('mssql/password', $data, lang('base_settings'));
     }
 }

@@ -1,15 +1,15 @@
 <?php
 
 /**
- * MSSQL controller.
+ * Set password view.
  *
  * @category   apps
  * @package    mssql
- * @subpackage controllers
+ * @subpackage views
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2014 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       http://www.clearfoundation.com/docs/developer/apps/mariadb/
+ * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,49 +25,35 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.  
+//  
 ///////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
-// C L A S S
+// Load dependencies
 ///////////////////////////////////////////////////////////////////////////////
 
-/**
- * Mssql controller.
- *
- * @category   apps
- * @package    Mssql
- * @subpackage controllers
- * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014 ClearFoundation
- * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       http://www.clearfoundation.com/docs/developer/apps/Mssql/
- */
+$this->lang->load('base');
+$this->lang->load('mssql');
 
-class Mssql extends ClearOS_Controller
-{
-    /**
-     * Mssql default controller
-     *
-     * @return view
-     */
+///////////////////////////////////////////////////////////////////////////////
+// Show warning if password is not set
+///////////////////////////////////////////////////////////////////////////////
 
-    function index()
-    {
-        // Load libraries
-        //---------------
+if (!$is_running)
+    echo infobox_warning(lang('base_warning'), lang('mssql_management_tool_not_accessible'));
 
-        $this->lang->load('mssql');
+echo infobox_warning(lang('base_warning'), lang('mssql_lang_please_set_a_database_password'));
 
-        // Load views
-        //-----------
+echo form_open('mssql');
+echo form_header(lang('base_password'));
 
-        $views = array(
-            'mssql/server',
-            'mssql/setting'
-        );
+echo field_password('new_password', '', lang('base_password'));
+echo field_password('new_verify', '', lang('base_verify'));
 
-        $this->page->view_forms($views, lang('mssql_app_name'));
-    }
-}
+echo field_button_set(
+    array(form_submit_custom('submit_new', lang('mssql_set_password'), 'high'))
+);
+
+echo form_footer();
+echo form_close();

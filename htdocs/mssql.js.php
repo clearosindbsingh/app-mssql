@@ -7,7 +7,7 @@
  * @package    mssql
  * @subpackage javascript
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014 ClearFoundation
+ * @copyright  2017 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/mssql/
  */
@@ -54,88 +54,5 @@ header('Content-Type:application/x-javascript');
 ///////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
-    $('#mssql_running').hide();
-    $('#mssql_no_password').hide();
-    $('#mssql_password_ok').hide();
-
-    clearosGetMysqlStatus();
-
-    $(document).on('click','#btn_start_stop',function(){
-        $this = $(this);
-        var status = $(this).attr('data-status');
-        var next_status = "start";
-        if(status == 'running')
-        {
-            var next_status = "stop";
-        }
-        $this.attr("data-locked",1).html('<i class="fa fa-spinner fa-spin"></i>');
-        $.getJSON("/app/mssql/server/set_status/"+next_status,function(data){
-            $this.removeAttr("data-locked");
-        });
-    })
 });
-
-
-// Functions
-//----------
-
-function clearosGetMysqlStatus() {
-    $.ajax({
-        url: '/app/mssql/server/full_status',
-        method: 'GET',
-        dataType: 'json',
-        success : function(payload) {
-            handleMysqlForm(payload);
-            window.setTimeout(clearosGetMysqlStatus, 1000);
-        },
-        error: function (XMLHttpRequest, textStatus, errorThrown) {
-            window.setTimeout(clearosGetMysqlStatus, 1000);
-        }
-    });
-}
-
-function handleMysqlForm(payload) {
-    if (payload.status == 'running') {
-        if($("#btn_start_stop").attr('data-locked') != 1)
-            $('#btn_start_stop').attr('data-status',payload.status).text('Stop');
-        $('#mssql_running').hide();
-        $('#mssql_password_ok').show();
-
-        return;
-        $('#mssql_running').show();
-        if (payload.is_password_set) {
-            //$('#mssql_no_password').hide();
-            $('#mssql_password_ok').show();
-        } else {
-            //$('#mssql_no_password').show();
-            $('#mssql_password_ok').hide();
-        }
-    } else {
-        if($("#btn_start_stop").attr('data-locked') != 1)
-            $('#btn_start_stop').attr('data-status',payload.status).text('Start');
-        $('#mssql_running').hide();
-        //$('#mssql_no_password').hide();
-        $('#mssql_password_ok').show();
-    }
-
-}
-function checkServerStatus()
-{
-    $.getJSON("/app/mssql/server/full_status",function(data){
-        if(data.status == "running")
-        {
-            $("#confirm_modal").modal('show');
-        }
-        else
-        {
-            submitFormFinal();
-        }
-    })
-}
-function submitFormFinal()
-{
-    //$("#mssql_password_set").submit();
-    $(".theme-form-submit-update").html('<i class="fa fa-spinner fa-spin"></i>');
-    $("#submit_btn").trigger('click');
-}
 // vim: syntax=javascript

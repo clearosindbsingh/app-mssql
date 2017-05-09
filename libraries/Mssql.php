@@ -1,13 +1,13 @@
 <?php 
 
 /**
- * MariaDB class.
+ * MSSQL class.
  *
  * @category   apps
  * @package    mssql
  * @subpackage libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014-2016 ClearFoundation
+ * @copyright  2017 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
@@ -86,11 +86,12 @@ clearos_load_library('base/Validation_Exception');
  * @package    mssql
  * @subpackage libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2014 ClearFoundation
+ * @copyright  2017 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
 const COMMAND_MSSQL_FILE = "/usr/sbin/connect.exp";
+const FILE_EULA = "/var/clearos/mssql/eula";
 
 class Mssql extends Daemon
 {
@@ -113,12 +114,15 @@ class Mssql extends Daemon
         clearos_profile(__METHOD__, __LINE__);
 
         parent::__construct('mssql');
-        $this->command_filepath = "/usr/sbin/connect.exp";
     }
-    function get_status1()
+    /**
+     * Gets the Current status.
+     *
+     * @return running or stopped
+     */
+    function get_status()
     {
         $options['validate_exit_code'] = FALSE;
-
         $shell = new Shell();
         $retval = $shell->execute(
             "systemctl status mssql-server", " ", TRUE, $options
@@ -130,6 +134,11 @@ class Mssql extends Daemon
         }
         return $running_status;
     }
+    /**
+    * Update the root password.
+    *
+    * @return exception if error exists
+    */
     public function set_root_password($password,$system_password)
     {
         clearos_profile(__METHOD__, __LINE__);
@@ -139,12 +148,8 @@ class Mssql extends Daemon
         Validation_Exception::is_valid($this->validate_password($password));
         Validation_Exception::is_valid($this->validate_password($system_password));
 
-        $this->stop_service();
         $this->put_password_file($password,$system_password); 
         $command = COMMAND_MSSQL_FILE;
-
-
-
 
         $shell = new Shell();
         $options['validate_exit_code'] = FALSE;
@@ -159,41 +164,41 @@ class Mssql extends Daemon
             throw new Engine_Exception($error);
         }
     }
-    function start_service()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-        $shell = new Shell();
-        $options['validate_exit_code'] = FALSE;
-        $retval = $shell->execute(
-            //$command, "start-service", true, $options
-            "systemctl start mssql-server", "", true, $options
-        );
-        //var_dump($shell->get_output());
-        //var_dump($retval); die('df');
-    }
-    function stop_service()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-        $shell = new Shell();
-        $options['validate_exit_code'] = false;
-        $retval = $shell->execute(
-            //$command, "stop-service", TRUE, $options
-            "systemctl stop mssql-server", "", true, $options
-        );
-        //var_dump($shell->get_output());
-        //var_dump($retval); die('df');
-    }
 
     /**
-     * Gets the MSSQL Download URLURL.
+     * Gets the MSSQL Download URL.
      *
-     * @return string
+     * @return URL string
      */
     function get_download_url()
     {
         return "https://www.microsoft.com/en-us/download/details.aspx?id=50402";
     }
 
+    /**
+     * Agreed to EULA.
+     *
+     * @return boolean
+     */
+    function is_eula_agreed()
+    {
+    $file = new File(self::FILE_EULA);
+        if ($file->exists())
+        return TRUE;
+    return FALSE;
+    }
+
+    /**
+     * Set agreed to EULA.
+     *
+     * @return void
+     */
+    function set_eula_agreed()
+    {
+    $file = new File(self::FILE_EULA);
+        if (!$file->exists())
+            $file->create('webconfig', 'webconfig', "0644");
+    }
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N   R O U T I N E S
     ///////////////////////////////////////////////////////////////////////////////
@@ -231,10 +236,16 @@ class Mssql extends Daemon
         if ($password != $verify)
             return lang('mariadb_password_mismatch');
     }
-
+    /**
+     * Set password via Expect.
+     *
+     * @param string $password 
+     * @param string $system password 
+     *
+     * @return void
+     */
     function put_password_file($password = "Champ@123",$system_password)
     {
-        error_reporting(E_ALL); ini_set('display_errors', 1); 
         $file = COMMAND_MSSQL_FILE;
 
         $commandc_code = '#!/usr/bin/expect -f';
@@ -263,50 +274,5 @@ class Mssql extends Daemon
             $file->create('root','root','0777');
         $commandc_codeA[] = $commandc_code;
         $file->dump_contents_from_array($commandc_codeA);
-
-        // $f = fopen($file, "w") or die('File not open');
-        // fwrite($f, $commandc_code);
-        // fclose($f);
-        // chmod($file, 0777);
-    }
-    function start_service_file()
-    {
-        $file = COMMAND_MSSQL_FILE;
-        $commandc_code = '#!/usr/bin/expect -f';
-
-        $commandc_code = $commandc_code.  "\n";
-        $commandc_code = $commandc_code. 'set timeout 60';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'spawn systemctl start mssql-server\n';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'expect "#" { send "systemctl start mssql-server\n" }';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'interact';
-        $commandc_code = $commandc_code. "\n";
-
-        $f = fopen($file, "w") or die('File not open');
-        fwrite($f, $commandc_code);
-        fclose($f);
-        chmod($file, 0777);
-    }
-    function stop_service_file()
-    {
-        $file = COMMAND_MSSQL_FILE;
-        $commandc_code = '#!/usr/bin/expect -f';
-
-        $commandc_code = $commandc_code.  "\n";
-        $commandc_code = $commandc_code. 'set timeout 60';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'spawn systemctl stop mssql-server\n';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'expect "*#" { send "systemctl stop mssql-server\n" }';
-        $commandc_code = $commandc_code. "\n";
-        $commandc_code = $commandc_code. 'interact';
-        $commandc_code = $commandc_code. "\n";
-
-        $f = fopen($file, "w") or die('File not open');
-        fwrite($f, $commandc_code);
-        fclose($f);
-        chmod($file, 0777);
     }
 }
