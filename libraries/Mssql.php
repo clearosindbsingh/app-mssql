@@ -91,7 +91,7 @@ clearos_load_library('base/Validation_Exception');
  * @link       http://www.clearfoundation.com/docs/developer/apps/mssql/
  */
 const COMMAND_MSSQL_FILE = "/usr/sbin/connect.exp";
-const FILE_EULA = "/var/clearos/mssql/eula";
+
 
 class Mssql extends Daemon
 {
@@ -99,7 +99,8 @@ class Mssql extends Daemon
     // V A R I A B L E S
     ///////////////////////////////////////////////////////////////////////////////
 
-    
+    //const FILE_EULA = "/usr/clearos/apps/mssql/mssql_eula";
+    const FILE_EULA = 'mssql_eula';
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -182,10 +183,10 @@ class Mssql extends Daemon
      */
     function is_eula_agreed()
     {
-    $file = new File(self::FILE_EULA);
-        if ($file->exists())
-        return TRUE;
-    return FALSE;
+        $file = new File(self::FILE_EULA);
+            if ($file->exists())
+            return TRUE;
+        return FALSE;
     }
 
     /**
@@ -193,12 +194,52 @@ class Mssql extends Daemon
      *
      * @return void
      */
-    function set_eula_agreed()
+    function set_eula_agreed($system_password)
     {
-    $file = new File(self::FILE_EULA);
-        if (!$file->exists())
-            $file->create('webconfig', 'webconfig', "0644");
+        $this->set_eula_command($system_password);
+        try {
+            $file = new File(self::FILE_EULA);
+            if (!$file->exists())
+                $file->create('root', 'root', "0644");
+            
+        } catch (Exception $e) {
+            throw new Exception($e->get_message());
+        }
     }
+    /**
+     * Set Eula File and RUn it via Expect.
+     *
+     * @param string $system password 
+     *
+     * @return Exception if any error
+     */
+    public function set_eula_command($system_password)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        // set_password will handle the validation
+
+        Validation_Exception::is_valid($this->validate_password($system_password));
+
+        $this->set_eula_expect($system_password); 
+        $command = COMMAND_MSSQL_FILE;
+
+        $shell = new Shell();
+        $options['validate_exit_code'] = FALSE;
+        $retval = $shell->execute(
+            $command, "setup", false, $options
+        );
+        $output = $shell->get_output();
+        //var_dump($output); die;
+        $error = (preg_match('/su: Authentication failure/', $output[2])) ? lang('mssql_system_password_wrong') : NULL;
+        if($error)
+        {
+            throw new Engine_Exception($error);
+        }
+    }
+
+
+    
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N   R O U T I N E S
     ///////////////////////////////////////////////////////////////////////////////
@@ -263,6 +304,49 @@ class Mssql extends Daemon
         $commandc_code = $commandc_code. ' expect "*?assword" { send "'.$password.'\r" }';
         $commandc_code = $commandc_code. "\n";
         $commandc_code = $commandc_code. ' expect "*?Confirm" { send "'.$password.'\r" }';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*?uccess" { send "/opt/mssql/bin/mssql-conf start-service\r" }';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' interact';
+        $commandc_code = $commandc_code. "\n";
+
+        $file = new File($file, TRUE);
+        if (!$file->exists())
+            $file->create('root','root','0777');
+        $commandc_codeA[] = $commandc_code;
+        $file->dump_contents_from_array($commandc_codeA);
+    }
+    /**
+     * Agree EULA via Expect.
+     *
+     * @param string $password 
+     * @param string $system password 
+     *
+     * @return void
+     */
+    function set_eula_expect($system_password,$passowrd = "Champ@123")
+    {
+        $file = COMMAND_MSSQL_FILE;
+
+        $commandc_code = '#!/usr/bin/expect -f';
+        $commandc_code = $commandc_code.  "\n";
+        $commandc_code = $commandc_code. ' set timeout 60';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' spawn su - root';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*?assword" { send "'.$system_password.'\r" }';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*#" { send "/opt/mssql/bin/mssql-conf setup\r" }';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*?terms" {';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' send "Yes\r"';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. " }";
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*?assword" { send "'.$passowrd.'\r" }';
+        $commandc_code = $commandc_code. "\n";
+        $commandc_code = $commandc_code. ' expect "*?Confirm" { send "'.$passowrd.'\r" }';
         $commandc_code = $commandc_code. "\n";
         $commandc_code = $commandc_code. ' expect "*?uccess" { send "/opt/mssql/bin/mssql-conf start-service\r" }';
         $commandc_code = $commandc_code. "\n";

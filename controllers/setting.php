@@ -61,6 +61,7 @@ class Setting extends ClearOS_Controller
 
     function index()
     {
+    	ini_set("display_startup_errors", 1); ini_set("display_errors", 1);
         // Load libraries
         //---------------
 
@@ -147,9 +148,29 @@ class Setting extends ClearOS_Controller
         // Load views
         //-----------
 
-        if (TRUE)  # DO CHECK HERE to determine what view to present
-		$this->page->view_form('mssql/setting', $data, lang('base_settings'));
-	else
-		$this->page->view_form('mssql/password', $data, lang('base_settings'));
+	    if ($this->mssql->is_eula_agreed())  
+			$this->page->view_form('mssql/setting', $data, lang('base_settings'));
+		else
+			$this->page->view_form('mssql/eula', $data, lang('base_settings'));
+    }
+    function agree_eula()
+    {
+    	
+    	$this->load->library('mssql/Mssql');
+    	$this->lang->load('mssql');
+    	$system_password = $this->input->post('system_password');
+    	$this->form_validation->set_policy('system_password', 'mssql/mssql', 'validate_password', TRUE);
+    	$form_ok = $this->form_validation->run();
+    	if ($form_ok) {
+            try {
+               
+    			$this->mssql->set_eula_agreed($system_password);
+    			redirect('mssql');
+            } catch (Exception $e) {
+                $this->page->view_exception($e);
+                return;
+            }
+        }
+    	$this->page->view_form('mssql/eula', $data, lang('base_settings'));
     }
 }

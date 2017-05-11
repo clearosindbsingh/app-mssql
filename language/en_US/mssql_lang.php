@@ -20,3 +20,6 @@ $lang['mssql_set_password'] = 'Set Password';
 $lang['mssql_system_password'] = 'System Password';
 $lang['mssql_system_password_wrong'] = 'System Password is not correct';
 $lang['base_password_lower_and_upper'] = 'Password must contains atleast one lower case & one upper case char';
+$lang['mssql_eula_required'] = 'End User License Agreement';
+$lang['mssql_please_agree_to_eula'] = 'Please accept the end user license agreement';
+$lang['mssql_i_agree'] = 'I Agree';
